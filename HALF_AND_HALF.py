@@ -18,6 +18,10 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 
+%load_ext autoreload
+%autoreload 2
+from func_ishikawa import *
+
 path_data = "./input/"
 path_train = path_data + "train.csv"
 path_test = path_data + "test.csv"
@@ -35,8 +39,6 @@ random.seed(seed)
 # %% [markdown]
 # ## Reading train data
 # データを読み込んでprimary_useはラベルエンコード
-
-# %%
 df_train = pd.read_csv(path_train)
 
 building = pd.read_csv(path_building)
@@ -52,47 +54,6 @@ weather_train = pd.read_csv(path_weather_train)
 
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from pandas.api.types import is_categorical_dtype
-
-def reduce_mem_usage(df, use_float16=False):
-    """
-    Iterate through all the columns of a dataframe and modify the data type to reduce memory usage.        
-    """
-    
-    start_mem = df.memory_usage().sum() / 1024**2
-    print("Memory usage of dataframe is {:.2f} MB".format(start_mem))
-    
-    for col in df.columns:
-        if is_datetime(df[col]) or is_categorical_dtype(df[col]):
-            continue
-        col_type = df[col].dtype
-        
-        if col_type != object:
-            c_min = df[col].min()
-            c_max = df[col].max()
-            if str(col_type)[:3] == "int":
-                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
-                    df[col] = df[col].astype(np.int8)
-                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
-                    df[col] = df[col].astype(np.int16)
-                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
-                    df[col] = df[col].astype(np.int32)
-                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
-                    df[col] = df[col].astype(np.int64)  
-            else:
-                if use_float16 and c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
-                    df[col] = df[col].astype(np.float16)
-                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
-                    df[col] = df[col].astype(np.float32)
-                else:
-                    df[col] = df[col].astype(np.float64)
-        else:
-            df[col] = df[col].astype("category")
-
-    end_mem = df.memory_usage().sum() / 1024**2
-    print("Memory usage after optimization is: {:.2f} MB".format(end_mem))
-    print("Decreased by {:.1f}%".format(100 * (start_mem - end_mem) / start_mem))
-    
-    return df
 
 
 # %%
@@ -168,14 +129,16 @@ X_half_2 = X_train[int(X_train.shape[0] / 2):]
 y_half_1 = y_train[:int(X_train.shape[0] / 2)]
 y_half_2 = y_train[int(X_train.shape[0] / 2):]
 
+#%%
 categorical_features = ["building_id", "site_id", "meter", "primary_use", "hour", "weekday"]
-
 d_half_1 = lgb.Dataset(X_half_1, label=y_half_1, categorical_feature=categorical_features, free_raw_data=False)
 d_half_2 = lgb.Dataset(X_half_2, label=y_half_2, categorical_feature=categorical_features, free_raw_data=False)
 
+#%%
 watchlist_1 = [d_half_1, d_half_2]
 watchlist_2 = [d_half_2, d_half_1]
 
+#%%
 params = {
     "objective": "regression",
     "boosting": "gbdt",
@@ -185,11 +148,10 @@ params = {
     "reg_lambda": 2,
     "metric": "rmse"
 }
-
-print("Building model with first half and validating on second half:")
+print("FIRST...")
 model_half_1 = lgb.train(params, train_set=d_half_1, num_boost_round=1000, valid_sets=watchlist_1, verbose_eval=200, early_stopping_rounds=200)
 
-print("Building model with second half and validating on first half:")
+print("SECOND...")
 model_half_2 = lgb.train(params, train_set=d_half_2, num_boost_round=1000, valid_sets=watchlist_2, verbose_eval=200, early_stopping_rounds=200)
 
 # %% [markdown]
