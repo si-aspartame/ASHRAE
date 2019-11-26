@@ -72,7 +72,7 @@ def transform(df, not_use):
     df['weekday'] = np.uint8(df['timestamp'].dt.weekday)
     # absm=lambda x: abs(x-6)
     # df['month'] = np.uint8(df['timestamp'].dt.month.map(absm))
-    #df['month'] = np.uint8(df['timestamp'].dt.month)
+    df['month'] = np.uint8(df['timestamp'].dt.month)
     #df['year'] = np.uint8(df['timestamp'].dt.year-2000)
 
     dates_range = pd.date_range(start='2015-12-31', end='2019-01-01')

@@ -77,7 +77,18 @@ merged = merged.drop_duplicates().set_index('building_id')
 merged.head()
 
 # %%
-merged.plot(kind='scatter', x=u'building_id_meter_reading_mean', y=u'building_id_meter_reading_median', log=True)
+merged.plot(kind='scatter', x=u'building_id_meter_reading_mean', y=u'building_id_meter_reading_median')
+train['day'] = np.uint8(train['timestamp'].dt.day)
 
+# %%
+# 右側がbuilding_id=1099
+# 
+display(train[train['building_id_meter_reading_mean'] > 1750000])
+print(train[train['building_id_meter_reading_mean'] > 1750000]['building_id'].unique())
+
+# %%
+# 左上はbuilding_id = 1284
+display(train[train['building_id_meter_reading_median'] > 5000])
+print(train[train['building_id_meter_reading_median'] > 5000]['building_id'].unique())
 
 # %%
